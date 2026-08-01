@@ -1,0 +1,85 @@
+package com.winkvpn.app.data
+
+import android.content.Context
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialException
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.providers.Google
+import io.github.jan.supabase.auth.providers.builtin.IDToken
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ * ВАЖНО: замени значение ниже на настоящий Google Web Client ID
+ * (создаётся в Google Cloud Console → Credentials → Web application,
+ * см. шаг 2.3 инструкции). Без этого Google-вход не заработает —
+ * приложение будет показывать ошибку при попытке войти.
+ * ═══════════════════════════════════════════════════════════════════════
+ */
+private const val GOOGLE_WEB_CLIENT_ID = "ВСТАВЬ_СЮДА_GOOGLE_WEB_CLIENT_ID.apps.googleusercontent.com"
+
+sealed class GoogleSignInResult {
+    data object Success : GoogleSignInResult()
+    data class Error(val message: String) : GoogleSignInResult()
+    data object Cancelled : GoogleSignInResult()
+}
+
+object GoogleAuthManager {
+
+    suspend fun signIn(context: Context): GoogleSignInResult {
+        val credentialManager = CredentialManager.create(context)
+
+        val googleIdOption = GetGoogleIdOption.Builder()
+            .setFilterByAuthorizedAccounts(false)
+            .setServerClientId(GOOGLE_WEB_CLIENT_ID)
+            .setAutoSelectEnabled(false)
+            .build()
+
+        val request = GetCredentialRequest.Builder()
+            .addCredentialOption(googleIdOption)
+            .build()
+
+        return try {
+            val result = credentialManager.getCredential(context, request)
+            val credential = result.credential
+
+            if (credential is CustomCredential &&
+                credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+            ) {
+                val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                val idToken = googleIdTokenCredential.idToken
+
+                // Передаём Google ID-токен в Supabase — он сам проверит его
+                // подлинность и создаст/найдёт пользователя в базе.
+                SupabaseClientProvider.client.auth.signInWith(IDToken) {
+                    this.idToken = idToken
+                    provider = Google
+                }
+
+                GoogleSignInResult.Success
+            } else {
+                GoogleSignInResult.Error("Неожиданный тип учётных данных")
+            }
+        } catch (e: GetCredentialException) {
+            GoogleSignInResult.Cancelled
+        } catch (e: GoogleIdTokenParsingException) {
+            GoogleSignInResult.Error("Не удалось разобрать токен Google: ${e.message}")
+        } catch (e: Exception) {
+            GoogleSignInResult.Error(e.message ?: "Неизвестная ошибка входа")
+        }
+    }
+
+    /** Текущий пользователь уже авторизован (сессия восстановлена автоматически SDK) */
+    fun isSignedIn(): Boolean {
+        return SupabaseClientProvider.client.auth.currentUserOrNull() != null
+    }
+
+    suspend fun signOut() {
+        SupabaseClientProvider.client.auth.signOut()
+    }
+}
+

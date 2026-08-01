@@ -1,0 +1,8 @@
+<resources>
+    <style name="Theme.WinkVpn" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/wink_yellow</item>
+        <item name="android:colorBackground">@color/wink_yellow</item>
+        <item name="android:windowDisablePreview">false</item>
+    </style>
+</resources>
+
