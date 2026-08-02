@@ -1,3 +1,11 @@
+#!/usr/bin/env bash
+# WinFix3.sh — фикс: gradle-version в workflow YAML был БЕЗ кавычек, поэтому
+# "8.10" парсилось как число 8.10 == 8.1 (незначащий ноль отбрасывается),
+# и реально ставился Gradle 8.1 вместо 8.10. Теперь версия в кавычках как строка.
+set -e
+echo "Обновляю workflow..."
+mkdir -p ".github/workflows"
+cat > ".github/workflows/android-build.yml" << 'WINKVPN_EOF'
 name: Build Android APK
 
 on:
@@ -38,3 +46,6 @@ jobs:
       - name: Print debug SHA-1 fingerprint
         run: keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
 
+WINKVPN_EOF
+echo "Готово!"
+echo "Дальше: git add -A && git commit -m fix_gradle_yaml && git push"
