@@ -1,3 +1,14 @@
+#!/usr/bin/env bash
+# WinFix6.sh — kotlinOptions{jvmTarget} стал ошибкой в новых версиях Kotlin,
+# переехал на новый DSL kotlin{compilerOptions{jvmTarget.set(...)}}.
+# Заодно поднял Gradle до 8.14.4 (минимум, который потребует Kotlin 2.5.0).
+set -e
+echo "Обновляю файлы..."
+mkdir -p "app"
+mkdir -p "gradle/wrapper"
+mkdir -p ".github/workflows"
+
+cat > "app/build.gradle.kts" << 'WINKVPN_EOF'
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -76,3 +87,59 @@ dependencies {
     // implementation("com.wireguard.android:tunnel:1.0.20230706") // реальный WireGuard туннель
 }
 
+WINKVPN_EOF
+
+cat > "gradle/wrapper/gradle-wrapper.properties" << 'WINKVPN_EOF'
+distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\://services.gradle.org/distributions/gradle-8.14.4-bin.zip
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
+
+WINKVPN_EOF
+
+cat > ".github/workflows/android-build.yml" << 'WINKVPN_EOF'
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: "8.14.4"
+
+      - name: Build debug APK
+        run: gradle assembleDebug --no-daemon
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wink-vpn-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Print debug SHA-1 fingerprint
+        run: keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
+
+WINKVPN_EOF
+
+echo "Готово!"
+echo "Дальше: git add -A && git commit -m fix_jvmtarget_dsl && git push"
