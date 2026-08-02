@@ -1,3 +1,24 @@
+#!/usr/bin/env bash
+# WinFix5.sh — транзитивная зависимость притащила Kotlin stdlib 2.4.0,
+# а наш компилятор Kotlin 1.9.24 её не читает. Поднимаю Kotlin до 2.4.10
+# и добавляю новый обязательный плагин Compose-компилятора
+# (с Kotlin 2.0+ он больше не встроен в AGP, а идёт отдельным плагином).
+set -e
+echo "Обновляю файлы..."
+mkdir -p "app"
+
+cat > "build.gradle.kts" << 'WINKVPN_EOF'
+// Top-level build file
+plugins {
+    id("com.android.application") version "8.13.0" apply false
+    id("org.jetbrains.kotlin.android") version "2.4.10" apply false
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.4.10" apply false
+    id("org.jetbrains.kotlin.plugin.compose") version "2.4.10" apply false
+}
+
+WINKVPN_EOF
+
+cat > "app/build.gradle.kts" << 'WINKVPN_EOF'
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -68,3 +89,7 @@ dependencies {
     // implementation("com.wireguard.android:tunnel:1.0.20230706") // реальный WireGuard туннель
 }
 
+WINKVPN_EOF
+
+echo "Готово!"
+echo "Дальше: git add -A && git commit -m fix_kotlin_2_4 && git push"
