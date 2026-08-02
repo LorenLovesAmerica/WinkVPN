@@ -13,14 +13,10 @@ import io.github.jan.supabase.auth.providers.Google
 import io.github.jan.supabase.auth.providers.builtin.IDToken
 
 /**
- * ═══════════════════════════════════════════════════════════════════════
- * ВАЖНО: замени значение ниже на настоящий Google Web Client ID
- * (создаётся в Google Cloud Console → Credentials → Web application,
- * см. шаг 2.3 инструкции). Без этого Google-вход не заработает —
- * приложение будет показывать ошибку при попытке войти.
- * ═══════════════════════════════════════════════════════════════════════
+ * Web Client ID из Google Cloud Console (создан ранее в этом чате,
+ * тип Web application — именно он нужен для проверки токена на стороне Supabase).
  */
-private const val GOOGLE_WEB_CLIENT_ID = "ВСТАВЬ_СЮДА_GOOGLE_WEB_CLIENT_ID.apps.googleusercontent.com"
+private const val GOOGLE_WEB_CLIENT_ID = "706014079943-mp693b1oa09ss3pv77gjgrcvugkov278.apps.googleusercontent.com"
 
 sealed class GoogleSignInResult {
     data object Success : GoogleSignInResult()

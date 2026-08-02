@@ -51,7 +51,7 @@ import kotlin.random.Random
 private enum class ConnState { OFF, CONNECTING, ON }
 
 @Composable
-fun MainScreen() {
+fun MainScreen(onProfileClick: () -> Unit = {}) {
     var connState by remember { mutableStateOf(ConnState.OFF) }
     var serverIdx by remember { mutableIntStateOf(0) }
     var trafficMb by remember { mutableFloatStateOf(0f) }
@@ -107,7 +107,7 @@ fun MainScreen() {
                 .padding(top = 48.dp)
         ) {
 
-            // Topbar — только логотип и название, без лишней кнопки
+            // Topbar — значок профиля слева, рядом логотип и название
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -115,6 +115,17 @@ fun MainScreen() {
                 horizontalArrangement = Arrangement.Start,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(WinkBlack09)
+                        .clickable(onClick = onProfileClick),
+                    contentAlignment = Alignment.Center
+                ) {
+                    PersonIcon(sizeDp = 19, tint = WinkBlack)
+                }
+                Spacer(Modifier.width(12.dp))
                 Image(
                     painter = painterResource(id = R.drawable.logo_wink),
                     contentDescription = null,
@@ -178,7 +189,7 @@ fun MainScreen() {
 
             Spacer(Modifier.height(18.dp))
 
-            // Country selector
+            // Сервер — пока только Германия
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -192,13 +203,11 @@ fun MainScreen() {
                         .weight(1f)
                         .clip(RoundedCornerShape(99.dp))
                         .background(WinkBlack09)
-                        .clickable { serverIdx = (serverIdx + 1) % servers.size }
                         .padding(horizontal = 16.dp, vertical = 11.dp)
                 ) {
                     Text(server.flag, fontSize = 18.sp)
                     Spacer(Modifier.width(8.dp))
                     Text(server.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = WinkBlack, modifier = Modifier.weight(1f))
-                    Text("▼", fontSize = 12.sp, color = WinkBlack.copy(alpha = 0.35f))
                 }
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -257,32 +266,67 @@ fun MainScreen() {
 
             Spacer(Modifier.height(16.dp))
 
-            // Три полупрозрачные серые кнопки: промокод / телеграм / поддержка
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+            // Слева — компактные ячейки (промокод / телеграм / поддержка),
+            // справа — большой квадрат "Безлимитная подписка"
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 22.dp)
+                    .height(IntrinsicSize.Min),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                ActionRowButton(
-                    label = "Активировать промокод",
-                    icon = { GiftGlyph(sizeDp = 20) },
-                    onClick = { promoOpen = true }
-                )
-                ActionRowButton(
-                    label = "Наш Telegram канал",
-                    icon = { TelegramPaperPlaneIcon(sizeDp = 19, tint = WinkBlack) },
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/Winkvpn_official"))
-                        context.startActivity(intent)
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    CompactActionCell(
+                        label = "Промокод",
+                        icon = { GiftGlyph(sizeDp = 20) },
+                        onClick = { promoOpen = true }
+                    )
+                    CompactActionCell(
+                        label = "Наш Telegram",
+                        icon = { TelegramPaperPlaneIcon(sizeDp = 19, tint = WinkBlack) },
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/Winkvpn_official"))
+                            context.startActivity(intent)
+                        }
+                    )
+                    CompactActionCell(
+                        label = "Поддержка",
+                        icon = { HeadsetGlyph(sizeDp = 20) },
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/WinkSupport_Bot"))
+                            context.startActivity(intent)
+                        }
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(WinkBlack09)
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        InfinityIcon(widthDp = 46, heightDp = 24, tint = WinkBlack)
+                        Spacer(Modifier.height(10.dp))
+                        Text(
+                            "Безлимитная\nподписка",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Black,
+                            color = WinkBlack,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 17.sp
+                        )
                     }
-                )
-                ActionRowButton(
-                    label = "Поддержка",
-                    icon = { HeadsetGlyph(sizeDp = 20) },
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/Winkvpn_official"))
-                        context.startActivity(intent)
-                    }
-                )
+                }
             }
 
             Spacer(Modifier.height(24.dp))
@@ -395,7 +439,7 @@ private fun PowerButton(connected: Boolean, connecting: Boolean, onClick: () -> 
 }
 
 @Composable
-private fun ActionRowButton(
+private fun CompactActionCell(
     label: String,
     icon: @Composable () -> Unit,
     onClick: () -> Unit
@@ -404,14 +448,20 @@ private fun ActionRowButton(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(16.dp))
             .background(WinkBlack09)
             .clickable(onClick = onClick)
-            .padding(horizontal = 18.dp, vertical = 15.dp)
+            .padding(horizontal = 14.dp, vertical = 13.dp)
     ) {
         icon()
-        Spacer(Modifier.width(14.dp))
-        Text(label, fontSize = 14.5.sp, fontWeight = FontWeight.Bold, color = WinkBlack)
+        Spacer(Modifier.width(10.dp))
+        Text(
+            label,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            color = WinkBlack,
+            maxLines = 1
+        )
     }
 }
 

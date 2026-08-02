@@ -66,6 +66,7 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:auth-kt")
     implementation("io.ktor:ktor-client-okhttp:3.5.0")
     implementation("io.ktor:ktor-client-core:3.5.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 
     // ── Google Sign-In через современный Credential Manager API ──
     implementation("androidx.credentials:credentials:1.3.0")

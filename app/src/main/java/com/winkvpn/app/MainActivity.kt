@@ -18,6 +18,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,6 +30,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.winkvpn.app.data.GoogleAuthManager
 import com.winkvpn.app.data.GoogleSignInResult
+import com.winkvpn.app.data.Profile
+import com.winkvpn.app.data.ProfileRepository
 import com.winkvpn.app.ui.screens.*
 import com.winkvpn.app.ui.theme.WinkYellow
 import kotlinx.coroutines.launch
@@ -51,10 +54,25 @@ class MainActivity : ComponentActivity() {
         setContent {
             Surface(modifier = Modifier.fillMaxSize(), color = WinkYellow) {
                 var screen by remember { mutableStateOf(Screen.SPLASH) }
+                var previousScreen by remember { mutableStateOf(Screen.MAIN) }
                 val scope = rememberCoroutineScope()
 
                 var isGoogleLoading by remember { mutableStateOf(false) }
                 var googleErrorMessage by remember { mutableStateOf<String?>(null) }
+
+                var profile by remember { mutableStateOf<Profile?>(null) }
+                var appLanguage by remember { mutableStateOf(AppLanguage.RU) }
+
+                // Как только попадаем на главный экран — подгружаем профиль
+                LaunchedEffect(screen) {
+                    if (screen == Screen.MAIN && profile == null) {
+                        val fetched = ProfileRepository.fetchCurrentProfile()
+                        if (fetched != null) {
+                            profile = fetched
+                            appLanguage = if (fetched.language == "en") AppLanguage.EN else AppLanguage.RU
+                        }
+                    }
+                }
 
                 var waitingForTelegramReturn by remember { mutableStateOf(false) }
                 var hasPausedSinceWaiting by remember { mutableStateOf(false) }
@@ -136,7 +154,31 @@ class MainActivity : ComponentActivity() {
                             }
                         )
 
-                        Screen.MAIN -> MainScreen()
+                        Screen.MAIN -> MainScreen(
+                            onProfileClick = {
+                                previousScreen = Screen.MAIN
+                                screen = Screen.PROFILE
+                            }
+                        )
+
+                        Screen.PROFILE -> ProfileScreen(
+                            email = profile?.email,
+                            nickname = profile?.nickname ?: "",
+                            userNumber = profile?.user_number,
+                            language = appLanguage,
+                            onNicknameChange = { newNick ->
+                                profile = profile?.copy(nickname = newNick)
+                                scope.launch { ProfileRepository.updateNickname(newNick) }
+                            },
+                            onLanguageChange = { newLang ->
+                                appLanguage = newLang
+                                profile = profile?.copy(language = if (newLang == AppLanguage.EN) "en" else "ru")
+                                scope.launch {
+                                    ProfileRepository.updateLanguage(if (newLang == AppLanguage.EN) "en" else "ru")
+                                }
+                            },
+                            onBack = { screen = previousScreen }
+                        )
                     }
                 }
             }
