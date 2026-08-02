@@ -1,3 +1,24 @@
+#!/usr/bin/env bash
+# WinFix2.sh — фикс версий: AGP 8.5.0 -> 8.7.0, compileSdk/targetSdk 34 -> 35,
+# Gradle 8.7 -> 8.10 (требуется новым транзитивным зависимостям Supabase/Credential Manager).
+set -e
+echo "Обновляю файлы..."
+
+mkdir -p ".github/workflows"
+mkdir -p "app"
+mkdir -p "gradle/wrapper"
+
+cat > "build.gradle.kts" << 'WINKVPN_EOF'
+// Top-level build file
+plugins {
+    id("com.android.application") version "8.7.0" apply false
+    id("org.jetbrains.kotlin.android") version "1.9.24" apply false
+    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.24" apply false
+}
+
+WINKVPN_EOF
+
+cat > "app/build.gradle.kts" << 'WINKVPN_EOF'
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -67,3 +88,59 @@ dependencies {
     // implementation("com.wireguard.android:tunnel:1.0.20230706") // реальный WireGuard туннель
 }
 
+WINKVPN_EOF
+
+cat > "gradle/wrapper/gradle-wrapper.properties" << 'WINKVPN_EOF'
+distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\://services.gradle.org/distributions/gradle-8.10-bin.zip
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
+
+WINKVPN_EOF
+
+cat > ".github/workflows/android-build.yml" << 'WINKVPN_EOF'
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.10
+
+      - name: Build debug APK
+        run: gradle assembleDebug --no-daemon
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wink-vpn-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Print debug SHA-1 fingerprint
+        run: keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
+
+WINKVPN_EOF
+
+echo "Готово!"
+echo "Дальше: git add -A && git commit -m fix_versions && git push"
