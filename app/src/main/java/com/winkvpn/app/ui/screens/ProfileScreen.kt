@@ -26,10 +26,14 @@ import com.winkvpn.app.ui.theme.WinkYellow
 
 @Composable
 fun ProfileScreen(
+    isAuthenticated: Boolean,
     email: String?,
     nickname: String,
     userNumber: Long?,
     language: AppLanguage,
+    isGoogleLoading: Boolean,
+    googleErrorMessage: String?,
+    onGoogleLogin: () -> Unit,
     onNicknameChange: (String) -> Unit,
     onLanguageChange: (AppLanguage) -> Unit,
     onBack: () -> Unit
@@ -45,7 +49,6 @@ fun ProfileScreen(
         ) {
             Spacer(Modifier.height(56.dp))
 
-            // Верхняя панель — назад + заголовок
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
@@ -66,9 +69,8 @@ fun ProfileScreen(
                 )
             }
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(40.dp))
 
-            // Большой аватар
             Box(
                 modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.Center
@@ -84,9 +86,47 @@ fun ProfileScreen(
                 }
             }
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(24.dp))
 
-            // ID пользователя
+            if (!isAuthenticated) {
+                // ── Не авторизован — предлагаем войти ──
+                Text(
+                    "Не авторизован",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Black,
+                    color = WinkBlack,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Войдите, чтобы сохранить бонусы и настройки",
+                    fontSize = 13.5.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = WinkBlack.copy(alpha = 0.5f),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(24.dp))
+                PrimaryButton(
+                    text = if (isGoogleLoading) "Входим…" else "Войти через Google",
+                    onClick = { if (!isGoogleLoading) onGoogleLogin() }
+                )
+                if (googleErrorMessage != null) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        googleErrorMessage,
+                        color = Color(0xFFC62828),
+                        fontSize = 12.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                return@Column
+            }
+
+            // ── Авторизован — полный профиль ──
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Box(
                     modifier = Modifier
@@ -105,7 +145,6 @@ fun ProfileScreen(
 
             Spacer(Modifier.height(28.dp))
 
-            // Почта (только просмотр)
             Text(
                 if (isRu) "Почта" else "Email",
                 fontSize = 12.sp, fontWeight = FontWeight.Black,
@@ -127,7 +166,6 @@ fun ProfileScreen(
 
             Spacer(Modifier.height(20.dp))
 
-            // Ник (редактируемый)
             Text(
                 if (isRu) "Никнейм" else "Nickname",
                 fontSize = 12.sp, fontWeight = FontWeight.Black,
@@ -157,7 +195,6 @@ fun ProfileScreen(
 
             Spacer(Modifier.height(28.dp))
 
-            // Язык
             Text(
                 if (isRu) "Язык" else "Language",
                 fontSize = 12.sp, fontWeight = FontWeight.Black,

@@ -63,13 +63,39 @@ class MainActivity : ComponentActivity() {
                 var profile by remember { mutableStateOf<Profile?>(null) }
                 var appLanguage by remember { mutableStateOf(AppLanguage.RU) }
 
-                // Как только попадаем на главный экран — подгружаем профиль
+                fun applyProfile(fetched: Profile?) {
+                    profile = fetched
+                    if (fetched != null) {
+                        appLanguage = if (fetched.language == "en") AppLanguage.EN else AppLanguage.RU
+                    }
+                }
+
+                // Как только попадаем на главный экран — подгружаем профиль (если уже вошли)
                 LaunchedEffect(screen) {
-                    if (screen == Screen.MAIN && profile == null) {
-                        val fetched = ProfileRepository.fetchCurrentProfile()
-                        if (fetched != null) {
-                            profile = fetched
-                            appLanguage = if (fetched.language == "en") AppLanguage.EN else AppLanguage.RU
+                    if (screen == Screen.MAIN && profile == null && GoogleAuthManager.isSignedIn()) {
+                        applyProfile(ProfileRepository.fetchCurrentProfile())
+                    }
+                }
+
+                // Общая логика входа через Google — используется и на экране приветствия,
+                // и на экране профиля (если человек пропустил вход раньше).
+                fun doGoogleSignIn(onSuccess: () -> Unit) {
+                    googleErrorMessage = null
+                    isGoogleLoading = true
+                    scope.launch {
+                        when (val result = GoogleAuthManager.signIn(this@MainActivity)) {
+                            is GoogleSignInResult.Success -> {
+                                applyProfile(ProfileRepository.fetchCurrentProfile())
+                                isGoogleLoading = false
+                                onSuccess()
+                            }
+                            is GoogleSignInResult.Cancelled -> {
+                                isGoogleLoading = false
+                            }
+                            is GoogleSignInResult.Error -> {
+                                isGoogleLoading = false
+                                googleErrorMessage = result.message
+                            }
                         }
                     }
                 }
@@ -111,25 +137,7 @@ class MainActivity : ComponentActivity() {
                         Screen.WELCOME -> WelcomeScreen(
                             isLoading = isGoogleLoading,
                             errorMessage = googleErrorMessage,
-                            onGoogleLogin = {
-                                googleErrorMessage = null
-                                isGoogleLoading = true
-                                scope.launch {
-                                    when (val result = GoogleAuthManager.signIn(this@MainActivity)) {
-                                        is GoogleSignInResult.Success -> {
-                                            isGoogleLoading = false
-                                            screen = Screen.TELEGRAM
-                                        }
-                                        is GoogleSignInResult.Cancelled -> {
-                                            isGoogleLoading = false
-                                        }
-                                        is GoogleSignInResult.Error -> {
-                                            isGoogleLoading = false
-                                            googleErrorMessage = result.message
-                                        }
-                                    }
-                                }
-                            },
+                            onGoogleLogin = { doGoogleSignIn(onSuccess = { screen = Screen.TELEGRAM }) },
                             onSkip = { screen = Screen.TELEGRAM }
                         )
 
@@ -162,10 +170,14 @@ class MainActivity : ComponentActivity() {
                         )
 
                         Screen.PROFILE -> ProfileScreen(
+                            isAuthenticated = GoogleAuthManager.isSignedIn() && profile != null,
                             email = profile?.email,
                             nickname = profile?.nickname ?: "",
                             userNumber = profile?.user_number,
                             language = appLanguage,
+                            isGoogleLoading = isGoogleLoading,
+                            googleErrorMessage = googleErrorMessage,
+                            onGoogleLogin = { doGoogleSignIn(onSuccess = {}) },
                             onNicknameChange = { newNick ->
                                 profile = profile?.copy(nickname = newNick)
                                 scope.launch { ProfileRepository.updateNickname(newNick) }

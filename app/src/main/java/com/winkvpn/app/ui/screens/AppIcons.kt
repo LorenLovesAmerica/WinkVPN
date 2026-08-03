@@ -11,7 +11,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 
-/** Простая, узнаваемая иконка "человек в кружке" — для кнопки профиля */
+/** Узнаваемая иконка "человек" — голова + купол плеч одним силуэтом (не два кружочка) */
 @Composable
 fun PersonIcon(sizeDp: Int = 20, tint: Color = Color.Black, modifier: Modifier = Modifier) {
     Canvas(modifier = modifier.size(sizeDp.dp)) {
@@ -19,17 +19,18 @@ fun PersonIcon(sizeDp: Int = 20, tint: Color = Color.Black, modifier: Modifier =
         val h = size.height
 
         // голова
-        drawCircle(tint, radius = w * 0.19f, center = Offset(w * 0.5f, h * 0.32f))
+        drawCircle(tint, radius = w * 0.17f, center = Offset(w * 0.5f, h * 0.27f))
 
-        // плечи — низ окружности, "срезанный" верхом прямоугольной области
-        val shoulders = Path().apply {
-            addOval(
-                androidx.compose.ui.geometry.Rect(
-                    left = w * 0.16f, top = h * 0.52f, right = w * 0.84f, bottom = h * 1.22f
-                )
-            )
+        // плечи/тело — купол: узкий сверху, широкий снизу, низ уходит за край
+        // иконки (Canvas сам обрежет по своим границам — получается плоский низ)
+        val body = Path().apply {
+            moveTo(w * 0.5f, h * 0.40f)
+            cubicTo(w * 0.22f, h * 0.40f, w * 0.10f, h * 0.62f, w * 0.10f, h * 1.05f)
+            lineTo(w * 0.90f, h * 1.05f)
+            cubicTo(w * 0.90f, h * 0.62f, w * 0.78f, h * 0.40f, w * 0.5f, h * 0.40f)
+            close()
         }
-        drawPath(shoulders, tint)
+        drawPath(body, tint)
     }
 }
 
