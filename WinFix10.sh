@@ -1,3 +1,15 @@
+#!/usr/bin/env bash
+# WinFix10.sh — используем GetSignInWithGoogleOption вместо GetGoogleIdOption.
+# Для ПЕРВОГО входа (аккаунт ещё не авторизован в приложении) GetGoogleIdOption
+# часто падает с NoCredentialException даже если аккаунт есть на телефоне —
+# это известная особенность Credential Manager API. GetSignInWithGoogleOption
+# создан именно для явной кнопки 'Войти через Google' и надёжно показывает
+# список аккаунтов на выбор.
+set -e
+echo "Обновляю файлы..."
+mkdir -p "app/src/main/java/com/winkvpn/app/data"
+
+cat > "app/src/main/java/com/winkvpn/app/data/GoogleAuthManager.kt" << 'WINKVPN_EOF'
 package com.winkvpn.app.data
 
 import android.content.Context
@@ -97,3 +109,7 @@ object GoogleAuthManager {
     }
 }
 
+WINKVPN_EOF
+
+echo "Готово!"
+echo "Дальше: git add -A && git commit -m fix_signin_with_google_option && git push"
