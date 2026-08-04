@@ -85,7 +85,23 @@ class MainActivity : ComponentActivity() {
                     scope.launch {
                         when (val result = GoogleAuthManager.signIn(this@MainActivity)) {
                             is GoogleSignInResult.Success -> {
-                                applyProfile(ProfileRepository.fetchCurrentProfile())
+                                // Раньше если этот запрос падал (например, профиль ещё
+                                // не успел создаться триггером), исключение улетало
+                                // необработанным и весь процесс входа замирал молча —
+                                // кнопка навсегда оставалась в состоянии "Входим…".
+                                try {
+                                    var fetched = ProfileRepository.fetchCurrentProfile()
+                                    if (fetched == null) {
+                                        // На случай если строка профиля создаётся триггером
+                                        // с небольшой задержкой сразу после регистрации —
+                                        // одна повторная попытка через паузу.
+                                        kotlinx.coroutines.delay(500)
+                                        fetched = ProfileRepository.fetchCurrentProfile()
+                                    }
+                                    applyProfile(fetched)
+                                } catch (e: Exception) {
+                                    // не критично — подтянем профиль позже
+                                }
                                 isGoogleLoading = false
                                 onSuccess()
                             }

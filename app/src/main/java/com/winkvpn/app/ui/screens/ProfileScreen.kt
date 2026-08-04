@@ -1,6 +1,7 @@
 package com.winkvpn.app.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -77,12 +78,21 @@ fun ProfileScreen(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(96.dp)
+                        .size(104.dp)
                         .clip(CircleShape)
-                        .background(WinkBlack09),
+                        .background(WinkBlack.copy(alpha = 0.08f))
+                        .border(width = 3.dp, color = WinkBlack, shape = CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    PersonIcon(sizeDp = 46, tint = WinkBlack)
+                    Box(
+                        modifier = Modifier
+                            .size(84.dp)
+                            .clip(CircleShape)
+                            .background(WinkBlack),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        PersonIcon(sizeDp = 42, tint = WinkYellow)
+                    }
                 }
             }
 
